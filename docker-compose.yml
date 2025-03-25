@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: a-cup
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123123gh
+      POSTGRES_DB: a-cup-db
+    ports:
+      - "5432:5434"
