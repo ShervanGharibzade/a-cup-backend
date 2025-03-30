@@ -1,8 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from "typeorm";
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn("increment")
   id: number;
 
   @Column({ unique: true })
@@ -12,5 +17,8 @@ export class User {
   email: string;
 
   @Column()
-  password: string;
+  password_hash: string;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
 }
