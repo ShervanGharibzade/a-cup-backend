@@ -32,9 +32,10 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(userDto.password, 10);
+
     const newUser = this.userRepository.create({
       ...userDto,
-      password: hashedPassword,
+      password_hash: hashedPassword,
     });
 
     await this.userRepository.save(newUser);
@@ -51,12 +52,13 @@ export class AuthService {
   ): Promise<{ accessToken: string }> {
     const user = await this.userRepository.findOne({ where: { email } });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
     const payload = { email: user.email, username: user.username };
     const accessToken = this.jwtService.sign(payload);
+
     return { accessToken };
   }
 
