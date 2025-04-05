@@ -9,13 +9,15 @@ import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { User } from "src/entities/user/user.entity";
 import { AuthUserDto } from "./authDto/authUser.dto";
+import * as jwt from "jsonwebtoken";
+import { redisClient } from "src/core/redis/redis.provider";
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
   async signIn(userDto: AuthUserDto): Promise<{ token: string }> {
@@ -25,7 +27,7 @@ export class AuthService {
 
     if (existingUser) {
       throw new ConflictException(
-        "User with this email or username already exists"
+        "User with this email or username already exists",
       );
     }
 
@@ -45,7 +47,7 @@ export class AuthService {
 
   async login(
     email: string,
-    password: string
+    password: string,
   ): Promise<{ accessToken: string }> {
     const user = await this.userRepository.findOne({ where: { email } });
 
@@ -58,8 +60,25 @@ export class AuthService {
     return { accessToken };
   }
 
-  async validateUser(email: string, password: string): Promise<boolean> {
-    const user = await this.userRepository.findOne({ where: { email } });
-    return user ? await bcrypt.compare(password, user.password) : false;
+  async logout(token: string): Promise<{ message: string }> {
+    try {
+      const decoded: any = jwt.decode(token);
+      if (!decoded || !decoded.exp) {
+        throw new UnauthorizedException("Invalid token");
+      }
+
+      const ttl = 2 * 24 * 60 * 60; // 2 days
+
+      await redisClient.set(`blacklist:${token}`, "true", "EX", ttl);
+
+      return { message: "User logged out successfully" };
+    } catch (err) {
+      throw new UnauthorizedException("Logout failed");
+    }
+  }
+
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    const result = await redisClient.get(`blacklist:${token}`);
+    return result === "true";
   }
 }
