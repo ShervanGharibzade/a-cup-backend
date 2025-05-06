@@ -1,43 +1,55 @@
-import { Injectable, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+	Injectable,
+	ConflictException,
+	UnauthorizedException,
+	BadRequestException,
+	InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User } from 'src/entities/user/user.entity';
 import { AuthUserDto } from './authDto/authUser.dto';
 import { RedisService } from 'src/redis/redis.service';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class AuthService {
 	constructor(
-		@InjectRepository(User)
-		private readonly userRepository: Repository<User>,
+		private readonly userService: UserService,
 		private readonly redisService: RedisService,
 		private readonly jwtService: JwtService,
 	) {}
 
-	async signIn(userDto: AuthUserDto): Promise<{ token: string }> {
-		const existingUser = await this.userRepository.findOne({
-			where: [{ email: userDto.email }, { username: userDto.username }],
-		});
+	async register(userDto: AuthUserDto): Promise<{ token: string }> {
+		try {
+			const isTaken = await this.userService.isUsed(userDto.email, userDto.username);
 
-		if (existingUser) {
-			throw new ConflictException('User with this email or username already exists');
+			if (isTaken) {
+				throw new ConflictException('User with this email or username already exists');
+			}
+
+			const hashedPassword = await bcrypt.hash(userDto.password, 10);
+
+			const newUser = this.userService.create({
+				...userDto,
+				password_hash: hashedPassword,
+			});
+
+			await this.userService.save(newUser);
+
+			const payload = { email: userDto.email, username: userDto.username };
+
+			const accessToken = this.jwtService.sign(payload);
+
+			return { token: accessToken };
+		} catch (error) {
+			console.error('Error in register method:', error);
+
+			if (error instanceof ConflictException) {
+				throw error;
+			}
+
+			throw new InternalServerErrorException('Registration failed, please try again later.');
 		}
-
-		const hashedPassword = await bcrypt.hash(userDto.password, 10);
-
-		const newUser = this.userRepository.create({
-			...userDto,
-			password_hash: hashedPassword,
-		});
-
-		await this.userRepository.save(newUser);
-
-		const payload = { email: userDto.email, username: userDto.username };
-		const accessToken = this.jwtService.sign(payload);
-
-		return { token: accessToken };
 	}
 
 	async blacklistToken(token: string): Promise<void> {
@@ -54,7 +66,7 @@ export class AuthService {
 		}
 	}
 	async login(email: string, password: string): Promise<{ accessToken: string }> {
-		const user = await this.userRepository.findOne({ where: { email } });
+		const user = await this.userService.findByEmail(email);
 
 		if (!user || !(await bcrypt.compare(password, user.password_hash))) {
 			throw new UnauthorizedException('Invalid credentials');

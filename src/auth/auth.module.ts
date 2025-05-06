@@ -5,6 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/entities/user/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from 'src/redis/redis.module';
+import { UserModule } from 'src/user/user.module';
+import { UserService } from 'src/user/user.service';
 
 @Module({
 	imports: [
@@ -14,8 +16,11 @@ import { RedisModule } from 'src/redis/redis.module';
 			signOptions: { expiresIn: '48h' },
 		}),
 		RedisModule,
+		AuthModule,
+		UserModule,
 	],
 	providers: [AuthService],
 	controllers: [AuthController],
+	exports: [AuthService],
 })
 export class AuthModule {}

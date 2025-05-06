@@ -1,4 +1,4 @@
-import { Controller, Headers, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, InternalServerErrorException, Post } from '@nestjs/common';
 import { AuthUserDto } from './authDto/authUser.dto';
 import { AuthService } from './auth.service';
 
@@ -12,8 +12,13 @@ export class AuthController {
 	}
 
 	@Post('/sign-up')
-	async signUp(data: AuthUserDto) {
-		return await this.authService.signIn(data);
+	async signUp(@Body() body: AuthUserDto) {
+		try {
+			return await this.authService.register(body);
+		} catch (error) {
+			console.error('Error during registration:', error); // Log the error
+			throw new InternalServerErrorException('Internal server error');
+		}
 	}
 
 	@Post('/logout')

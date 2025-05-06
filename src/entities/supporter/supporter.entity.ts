@@ -1,23 +1,18 @@
-import {
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from "typeorm";
-import { User } from "../user/user.entity";
-import { Creator } from "../creator/creator.entity";
+import { CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from '../user/user.entity';
+import { Creator } from '../creator/creator.entity';
 
 @Entity()
 export class Supporter {
-  @PrimaryGeneratedColumn("increment")
-  id: number;
+	@PrimaryGeneratedColumn('increment')
+	id: number;
 
-  @OneToMany(() => User, (user) => user.id)
-  user: User;
+	@ManyToOne(() => User, (user) => user.supporters)
+	user: User;
 
-  @OneToMany(() => Creator, (creator) => creator.id)
-  favorite_creator: Creator;
+	@ManyToOne(() => Creator, (creator) => creator.supporters)
+	favorite_creator: Creator;
 
-  @CreateDateColumn({ type: "timestamptz" })
-  created_at: Date;
+	@CreateDateColumn({ type: 'timestamptz' })
+	created_at: Date;
 }
