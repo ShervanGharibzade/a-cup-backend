@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthUserDto } from './authDto/authUser.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { UserService } from 'src/user/user.service';
+import { QueryFailedError } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -19,36 +20,41 @@ export class AuthService {
 		private readonly jwtService: JwtService,
 	) {}
 
-	async register(userDto: AuthUserDto): Promise<{ token: string }> {
+	async register(userDto: AuthUserDto): Promise<string> {
 		try {
-			const isTaken = await this.userService.isUsed(userDto.email, userDto.username);
+			const isExisted = await this.userService.isUsed(userDto.email, userDto.username);
 
-			if (isTaken) {
-				throw new ConflictException('User with this email or username already exists');
+			if (isExisted) {
+				throw new ConflictException(`User with this username or email already exists`);
 			}
 
 			const hashedPassword = await bcrypt.hash(userDto.password, 10);
 
+			const { username, email } = userDto;
 			const newUser = this.userService.create({
-				...userDto,
+				username,
+				email,
 				password_hash: hashedPassword,
 			});
 
 			await this.userService.save(newUser);
 
 			const payload = { email: userDto.email, username: userDto.username };
-
 			const accessToken = this.jwtService.sign(payload);
 
-			return { token: accessToken };
+			return accessToken;
 		} catch (error) {
 			console.error('Error in register method:', error);
+
+			if (error instanceof QueryFailedError && (error as any).code === '23505') {
+				throw { status: 40120, message: 'User with this email or username already exists' };
+			}
 
 			if (error instanceof ConflictException) {
 				throw error;
 			}
 
-			throw new InternalServerErrorException('Registration failed, please try again later.');
+			throw new InternalServerErrorException(error);
 		}
 	}
 

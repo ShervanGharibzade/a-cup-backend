@@ -3,6 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user/user.entity';
+import { log } from 'console';
+import { userInfo } from 'os';
 
 @Injectable()
 export class UserService {
@@ -20,10 +22,13 @@ export class UserService {
 	}
 
 	async isUsed(email: string, username: string): Promise<boolean> {
-		const user = await this.userRepository.findOne({
-			where: [{ email }, { username }],
-		});
-		return !!user;
+		const [emailUser, usernameUser] = await Promise.all([
+			this.userRepository.findOne({ where: { email } }),
+			this.userRepository.findOne({ where: { username } }),
+		]);
+		console.log(emailUser, usernameUser, 'ge');
+
+		return !!emailUser || !!usernameUser;
 	}
 
 	create(userData: Partial<User>): User {

@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   postgres:
     image: postgres:latest
@@ -8,4 +9,4 @@ services:
       POSTGRES_PASSWORD: 123123gh
       POSTGRES_DB: a-cup-db
     ports:
-      - "5432:5434"
+      - '5434:5432'

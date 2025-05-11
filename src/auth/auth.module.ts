@@ -12,7 +12,7 @@ import { UserService } from 'src/user/user.service';
 	imports: [
 		TypeOrmModule.forFeature([User]),
 		JwtModule.register({
-			secret: process.env.JWT_SECRET,
+			secret: 'shsshshsh',
 			signOptions: { expiresIn: '48h' },
 		}),
 		RedisModule,

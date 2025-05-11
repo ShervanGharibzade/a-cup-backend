@@ -1,7 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { Supporter } from '../supporter/supporter.entity';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity()
+@Entity('users')
 export class User {
 	@PrimaryGeneratedColumn('increment')
 	id: number;
@@ -14,10 +13,4 @@ export class User {
 
 	@Column()
 	password_hash: string;
-
-	@CreateDateColumn({ type: 'timestamptz' })
-	created_at: Date;
-
-	@OneToMany(() => Supporter, (supporter) => supporter.user)
-	supporters: Supporter[];
 }
