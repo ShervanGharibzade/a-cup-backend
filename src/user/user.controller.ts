@@ -1,11 +1,16 @@
 // user.controller.ts
-import { Controller, Post, Body, Get, Headers, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Headers, UseGuards, Req, Header, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './user.service';
-import { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('user')
 export class UserController {
-	constructor(private readonly userService: UserService) {}
+	constructor(
+		private readonly userService: UserService,
+		private readonly jwtService: JwtService,
+		private readonly configService: ConfigService,
+	) {}
 
 	@Post('register')
 	async register(@Body() createUserDto: any) {
@@ -14,12 +19,31 @@ export class UserController {
 	}
 
 	@Get('profile')
-	async getProfile(@Req() req: Request) {
-		const userId = 22;
-		const user = await this.userService.findById(userId);
-		if (!user) {
-			throw new Error('User not found');
+	async getProfile(@Headers('authorization') authHeader: string) {
+		if (!authHeader) {
+			throw new UnauthorizedException('Authorization header missing');
 		}
-		return { message: 'Profile retrieved successfully', user };
+
+		const token = authHeader.split(' ')[1];
+		if (!token) {
+			throw new UnauthorizedException('Token not found in Authorization header');
+		}
+
+		let payload: any;
+		try {
+			const secret = this.configService.get<string>('JWT_SECRET');
+			payload = this.jwtService.verify(token, { secret });
+		} catch (err) {
+			throw new UnauthorizedException('Invalid token');
+		}
+
+		const userId = payload.userId;
+		const user = await this.userService.findById(userId);
+
+		if (!user) {
+			throw new UnauthorizedException('User not found');
+		}
+
+		return { user };
 	}
 }
